@@ -8,10 +8,16 @@
 
 //··································································································
 
-#include <ACANBuffer16.h>
+#define ARDUINO_ARCH_ESP32
+
+#include "esp32-hal-gpio.h"
+
 #include <ACAN2515Settings.h>
+#include <ACANBuffer16.h>
 #include <MCP2515ReceiveFilters.h>
 #include <SPI.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 //··································································································
 
