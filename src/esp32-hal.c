@@ -10,8 +10,6 @@ unsigned long IRAM_ATTR millis()
     return (unsigned long)(esp_timer_get_time() / 1000ULL);
 }
 
-#define NOP() asm volatile("nop")
-
 void IRAM_ATTR delayMicroseconds(uint32_t us)
 {
     uint32_t m = micros();

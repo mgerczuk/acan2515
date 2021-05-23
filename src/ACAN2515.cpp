@@ -8,6 +8,7 @@
 
 #include "freertos/task.h"
 #include "pins_arduino.h"
+#include "esp_err.h"
 
 #define MSBFIRST 1
 #define NOT_AN_INTERRUPT -1
@@ -111,7 +112,7 @@ mTXBIsFree () {
 //··································································································
 
 uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void)) {
+                          void (* inInterruptServiceRoutine) (void*)) {
 
   return beginWithoutFilterCheck (inSettings, inInterruptServiceRoutine, ACAN2515Mask (), ACAN2515Mask (), NULL, 0) ;
 }
@@ -119,7 +120,7 @@ uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
 //··································································································
 
 uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void),
+                          void (* inInterruptServiceRoutine) (void*),
                           const ACAN2515Mask inRXM0,
                           const ACAN2515AcceptanceFilter inAcceptanceFilters [],
                           const uint8_t inAcceptanceFilterCount) {
@@ -140,7 +141,7 @@ uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
 //··································································································
 
 uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void),
+                          void (* inInterruptServiceRoutine) (void*),
                           const ACAN2515Mask inRXM0,
                           const ACAN2515Mask inRXM1,
                           const ACAN2515AcceptanceFilter inAcceptanceFilters [],
@@ -162,7 +163,7 @@ uint16_t ACAN2515::begin (const ACAN2515Settings & inSettings,
 //··································································································
 
 uint16_t ACAN2515::beginWithoutFilterCheck (const ACAN2515Settings & inSettings,
-                                            void (* inInterruptServiceRoutine) (void),
+                                            void (* inInterruptServiceRoutine) (void*),
                                             const ACAN2515Mask inRXM0,
                                             const ACAN2515Mask inRXM1,
                                             const ACAN2515AcceptanceFilter inAcceptanceFilters [],
@@ -184,11 +185,8 @@ uint16_t ACAN2515::beginWithoutFilterCheck (const ACAN2515Settings & inSettings,
 //----------------------------------- if no error, configure port and MCP2515
   if (errorCode == 0) {
   //--- Configure ports
-    if (mINT != 255) { // 255 means interrupt is not used
-      pinMode (mINT, INPUT_PULLUP) ;
-    }
-    pinMode (mCS, OUTPUT) ;
-    digitalWrite (mCS, HIGH) ;  // CS is high outside a command
+    ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)mCS, GPIO_MODE_OUTPUT));
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)mCS, 1)); // CS is high outside a command
   //--- Send software reset to MCP2515
     mSPI.beginTransaction (mSPISettings) ;
       select () ;
@@ -202,16 +200,12 @@ uint16_t ACAN2515::beginWithoutFilterCheck (const ACAN2515Settings & inSettings,
   }
 //--- Configure interrupt only if no error (thanks to mvSarma)
   if (errorCode == 0) {
-    #ifdef ARDUINO_ARCH_ESP32
-      xTaskCreate (myESP32Task, "ACAN2515Handler", 1024, this, 256, NULL) ;
-    #endif
+    xTaskCreate (myESP32Task, "ACAN2515Handler", 2048, this, 256, NULL) ;
     if (mINT != 255) { // 255 means interrupt is not used
-      #ifdef ARDUINO_ARCH_ESP32
-        attachInterrupt (itPin, inInterruptServiceRoutine, FALLING) ;
-      #else
-        mSPI.usingInterrupt (itPin) ; // usingInterrupt is not implemented in Arduino ESP32
-        attachInterrupt (itPin, inInterruptServiceRoutine, LOW) ;
-      #endif
+        ESP_ERROR_CHECK(gpio_set_direction((gpio_num_t)mINT, GPIO_MODE_INPUT));
+        ESP_ERROR_CHECK(gpio_set_pull_mode((gpio_num_t)mINT, GPIO_PULLUP_ONLY));
+        ESP_ERROR_CHECK(gpio_set_intr_type((gpio_num_t)mINT, GPIO_INTR_NEGEDGE));
+        ESP_ERROR_CHECK(gpio_isr_handler_add((gpio_num_t)mINT, inInterruptServiceRoutine, nullptr));
     }
   }
 //----------------------------------- Return

@@ -37,16 +37,16 @@ class ACAN2515 {
 //··································································································
 
   public: uint16_t begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void)) ;
+                          void (* inInterruptServiceRoutine) (void*)) ;
 
   public: uint16_t begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void),
+                          void (* inInterruptServiceRoutine) (void*),
                           const ACAN2515Mask inRXM0,
                           const ACAN2515AcceptanceFilter inAcceptanceFilters [],
                           const uint8_t inAcceptanceFilterCount) ;
 
   public: uint16_t begin (const ACAN2515Settings & inSettings,
-                          void (* inInterruptServiceRoutine) (void),
+                          void (* inInterruptServiceRoutine) (void*),
                           const ACAN2515Mask inRXM0,
                           const ACAN2515Mask inRXM1,
                           const ACAN2515AcceptanceFilter inAcceptanceFilters [],
@@ -223,7 +223,7 @@ class ACAN2515 {
   private: inline void unselect (void) { digitalWrite (mCS, HIGH) ; }
 
   private: uint16_t beginWithoutFilterCheck (const ACAN2515Settings & inSettings,
-                                             void (* inInterruptServiceRoutine) (void),
+                                             void (* inInterruptServiceRoutine) (void*),
                                              const ACAN2515Mask inRXM0,
                                              const ACAN2515Mask inRXM1,
                                              const ACAN2515AcceptanceFilter inAcceptanceFilters [],
